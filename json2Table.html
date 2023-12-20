@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic JSON to Table</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 80%;
+            margin: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        #json-input {
+            width: 60%;
+            padding: 5px;
+            margin: 10px;
+        }
+
+        #json-button {
+            padding: 8px;
+            margin: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Dynamic JSON to Table</h1>
+
+    <input type="text" id="json-input" placeholder="Enter JSON data link">
+    <button id="json-button" onclick="fetchAndCreateTable()">Create Table</button>
+
+    <div id="table-container"></div>
+
+    <script>
+        // Function to fetch JSON data and create a table
+        async function fetchAndCreateTable() {
+            var jsonLink = document.getElementById("json-input").value;
+
+            try {
+                var response = await fetch(jsonLink);
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch JSON (${response.status} ${response.statusText})`);
+                }
+
+                var jsonData = await response.json();
+
+                var tableContainer = document.getElementById("table-container");
+                tableContainer.innerHTML = ''; // Clear previous content
+
+                var table = document.createElement("table");
+
+                // Create table header
+                var thead = document.createElement("thead");
+                var headerRow = document.createElement("tr");
+
+                for (var key in jsonData[0]) {
+                    var th = document.createElement("th");
+                    th.textContent = key;
+                    headerRow.appendChild(th);
+                }
+
+                thead.appendChild(headerRow);
+                table.appendChild(thead);
+
+                // Create table body
+                var tbody = document.createElement("tbody");
+
+                jsonData.forEach(function (item) {
+                    var row = document.createElement("tr");
+
+                    for (var key in item) {
+                        var cell = document.createElement("td");
+                        cell.textContent = item[key];
+                        row.appendChild(cell);
+                    }
+
+                    tbody.appendChild(row);
+                });
+
+                table.appendChild(tbody);
+
+                tableContainer.appendChild(table);
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        }
+    </script>
+
+</body>
+</html>
