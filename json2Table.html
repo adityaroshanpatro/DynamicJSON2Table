@@ -83,7 +83,7 @@
 
                     for (var key in item) {
                         var cell = document.createElement("td");
-                        cell.textContent = item[key];
+                        cell.textContent = typeof item[key] === 'object' ?  (item[key] !== null ? JSON.stringify(item[key]) : "") : (item[key] !== null ? item[key] : '');
                         row.appendChild(cell);
                     }
 
