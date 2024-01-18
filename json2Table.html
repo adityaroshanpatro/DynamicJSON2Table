@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic JSON to Table</title>
+    <title>Dynamic JSON to Editable Table </title>
     <style>
         table {
             border-collapse: collapse;
@@ -21,6 +21,14 @@
             background-color: #f2f2f2;
         }
 
+        td.editable {
+            cursor: pointer;
+        }
+
+        td.editable:hover {
+            background-color: #f0f0f0;
+        }
+
         #json-input {
             width: 60%;
             padding: 5px;
@@ -32,23 +40,34 @@
             margin: 10px;
             cursor: pointer;
         }
+
+        #loading {
+            display: none;
+        }
+
+        .edit-input {
+            width: 80%;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Dynamic JSON to Table</h1>
+    <h1>Dynamic JSON to Editable Table with API</h1>
 
     <input type="text" id="json-input" placeholder="Enter JSON data link">
     <button id="json-button" onclick="fetchAndCreateTable()">Create Table</button>
 
     <div id="table-container"></div>
+    <div id="loading">Loading...</div>
 
     <script>
-        // Function to fetch JSON data and create a table
         async function fetchAndCreateTable() {
             var jsonLink = document.getElementById("json-input").value;
+            var loadingIndicator = document.getElementById("loading");
 
             try {
+                loadingIndicator.style.display = "block";
+
                 var response = await fetch(jsonLink);
 
                 if (!response.ok) {
@@ -58,34 +77,68 @@
                 var jsonData = await response.json();
 
                 var tableContainer = document.getElementById("table-container");
-                tableContainer.innerHTML = ''; // Clear previous content
+                tableContainer.innerHTML = '';
 
                 var table = document.createElement("table");
 
-                // Create table header
                 var thead = document.createElement("thead");
                 var headerRow = document.createElement("tr");
 
-                for (var key in jsonData[0]) {
-                    var th = document.createElement("th");
-                    th.textContent = key;
-                    headerRow.appendChild(th);
-                }
+                var idTh = document.createElement("th");
+                idTh.textContent = "id";
+                headerRow.appendChild(idTh);
+
+                var uniqueKeys = new Set();
+
+                jsonData.forEach(function (item) {
+                    for (var key in item) {
+                        uniqueKeys.add(key);
+                    }
+                });
+
+                uniqueKeys.forEach(function (key) {
+                    if (key !== "id") {
+                        var th = document.createElement("th");
+                        th.textContent = key;
+                        headerRow.appendChild(th);
+                    }
+                });
 
                 thead.appendChild(headerRow);
                 table.appendChild(thead);
 
-                // Create table body
                 var tbody = document.createElement("tbody");
 
                 jsonData.forEach(function (item) {
                     var row = document.createElement("tr");
 
-                    for (var key in item) {
-                        var cell = document.createElement("td");
-                        cell.textContent = typeof item[key] === 'object' ?  (item[key] !== null ? JSON.stringify(item[key]) : "") : (item[key] !== null ? item[key] : '');
-                        row.appendChild(cell);
-                    }
+                    var idCell = document.createElement("td");
+                    idCell.textContent = item.id;
+                    row.appendChild(idCell);
+
+                    uniqueKeys.forEach(function (key) {
+                        if (key !== "id") {
+                            var cell = document.createElement("td");
+                            cell.textContent = typeof item[key] === 'object' ? (item[key] !== null ? JSON.stringify(item[key]) : "") : (item[key] !== null ? item[key] : '');
+                            cell.classList.add("editable");
+                            cell.setAttribute("contenteditable", "true");
+                            row.appendChild(cell);
+
+                            (function (currentKey) {
+                                cell.addEventListener("input", function () {
+                                    item[currentKey] = cell.textContent;
+                                });
+
+                                cell.addEventListener("keydown", function (event) {
+                                    if (event.key === "Enter") {
+                                        event.preventDefault();
+                                        var editedColumn = currentKey;
+                                        triggerApi(item, editedColumn);
+                                    }
+                                });
+                            })(key);
+                        }
+                    });
 
                     tbody.appendChild(row);
                 });
@@ -95,6 +148,36 @@
                 tableContainer.appendChild(table);
             } catch (error) {
                 alert(`Error: ${error.message}`);
+            } finally {
+                loadingIndicator.style.display = "none";
+            }
+        }
+
+        async function triggerApi(data, editedColumn) {
+            var apiEndpoint = 'https://demodpd.kore.ai/sbaccounts';
+
+            try {
+                var updatedData = {
+                    id: data.id,
+                };
+
+                updatedData[editedColumn] = data[editedColumn];
+            
+                var response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(updatedData),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to update data (${response.status} ${response.statusText})`);
+                }
+
+                alert('Data updated successfully!');
+            } catch (error) {
+                alert(`Error updating data: ${error.message}`);
             }
         }
     </script>
