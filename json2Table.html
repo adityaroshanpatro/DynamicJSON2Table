@@ -133,7 +133,8 @@
                                     if (event.key === "Enter") {
                                         event.preventDefault();
                                         var editedColumn = currentKey;
-                                        triggerApi(item, editedColumn);
+                                
+                                        triggerApi(item, editedColumn ,jsonLink);
                                     }
                                 });
                             })(key);
@@ -153,9 +154,12 @@
             }
         }
 
-        async function triggerApi(data, editedColumn) {
-            var apiEndpoint = 'https://demodpd.kore.ai/sbaccounts';
+        async function triggerApi(data, editedColumn ,link) {
 
+            var endIndex = link.indexOf("/?c")
+            var url = endIndex !== -1 ? link.substring(0, endIndex) : link;
+            var apiEndpoint = url;
+            
             try {
                 var updatedData = {
                     id: data.id,
