@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>JSON2Table</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <style>
         table {
             border-collapse: collapse;
@@ -29,13 +30,35 @@
             background-color: #f0f0f0;
         }
 
+        #json-input-container {
+            display: flex;
+            align-items: center;
+            margin: 10px;
+        }
+
         #json-input {
             width: 60%;
             padding: 5px;
             margin: 10px;
         }
 
+        #json-select {
+            margin: 10px;
+        }
+
         #json-button {
+            padding: 8px;
+            margin: 10px;
+            cursor: pointer;
+        }
+
+        #download-json-button{
+            padding: 8px;
+            margin: 10px;
+            cursor: pointer;
+        }
+        
+        #download-excel-button {
             padding: 8px;
             margin: 10px;
             cursor: pointer;
@@ -50,37 +73,51 @@
         }
 
         .pd-6 {
-        padding: 6px;
+            padding: 6px;
         }
 
-      .input-search {
-/*         background-color: white; */
-        color: black;
-        padding: 5px;
-        margin: 10px;
-        width: 10%;
-       }
+        .input-search {
+            color: black;
+            padding: 5px;
+            margin: 10px;
+            width: 10%;
+        }
     </style>
 </head>
 <body>
 
     <h1>Dynamic JSON to Editable Table and Search Option</h1>
 
-    <input type="text" id="json-input" placeholder="Enter JSON data link">
+    <!-- <div id="json-input-container">
+        <input type="text" id="json-input" placeholder="Enter or select JSON data link"> -->
+        <label for="json-select">Select a JSON link:</label>
+        <select id="json-select">
+            <option value="https://demodpd.kore.ai/sbaccounts">Account Data</option>
+            <option value="https://demodpd.kore.ai/sbcustomers">Customer Data</option>
+            <option value="https://demodpd.kore.ai/sbtransactions">Transaction Data</option>
+            <option value="https://demodpd.kore.ai/sblimits">Limit Data</option>
+            <!-- Add more options as needed -->
+        </select>
+    </div>
+
+<input type="text" id="json-input" placeholder="Or enter JSON data link">
     <button id="json-button" onclick="fetchAndCreateTable()">Create Table</button>
+    
+    <button id="download-json-button" onclick="downloadJSON()">Download JSON</button>
+    <!-- <button id="download-excel-button" onclick="downloadExcel()">Download Excel</button> -->
 
     <input
-      type="text"
-      id="searchInput"
-      placeholder="Search..."
-      class="input-search"
+        type="text"
+        id="searchInput"
+        placeholder="Search..."
+        class="input-search"
     />
     <button onclick="handleInputChange();" class="pd-6">&#x1F50E;</button>
     <button
-      onclick="document.getElementById('searchInput').value=''; handleInputChange();"
-      class="pd-6"
+        onclick="document.getElementById('searchInput').value=''; handleInputChange();"
+        class="pd-6"
     >
-      &#10006;
+        &#10006;
     </button>
 
     <div id="table-container"></div>
@@ -89,23 +126,23 @@
     <script>
         function handleInputChange() {
             document.querySelectorAll('tbody tr').forEach(function (row) {
-            var rowVisible = Array.from(row.querySelectorAll('td')).some(td =>
-                td.textContent
-                .toLowerCase()
-                .includes(
-                    document.getElementById('searchInput').value.toLowerCase()
+                var rowVisible = Array.from(row.querySelectorAll('td')).some(td =>
+                    td.textContent
+                        .toLowerCase()
+                        .includes(
+                            document.getElementById('searchInput').value.toLowerCase()
+                        )
                 )
-            )
-            row.style.display =
-                document.getElementById('searchInput').value.toLowerCase() === '' ||
-                rowVisible
-                ? 'table-row'
-                : 'none'
+                row.style.display =
+                    document.getElementById('searchInput').value.toLowerCase() === '' ||
+                    rowVisible
+                        ? 'table-row'
+                        : 'none'
             })
         }
 
         async function fetchAndCreateTable() {
-            var jsonLink = document.getElementById("json-input").value;
+            var jsonLink = document.getElementById("json-input").value || document.getElementById("json-select").value;
             var loadingIndicator = document.getElementById("loading");
 
             try {
@@ -224,6 +261,73 @@
             } catch (error) {
                 alert(`Error updating data: ${error.message}`);
             }
+        }
+
+        function downloadJSON() {
+            var jsonData = [];
+
+            // Collect the displayed data from the table
+            var rows = document.querySelectorAll('tbody tr');
+            rows.forEach(function(row) {
+                var rowData = {
+                    id: row.querySelector('td').textContent,
+                };
+
+                var cells = row.querySelectorAll('td.editable');
+                cells.forEach(function(cell, index) {
+                    var key = document.querySelector('thead tr').querySelectorAll('th')[index + 1].textContent;
+                    var value = cell.textContent;
+                    rowData[key] = value;
+                });
+
+                jsonData.push(rowData);
+            });
+
+            // Create a Blob and download the JSON file
+            var blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+            var url = window.URL.createObjectURL(blob);
+
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'table_data.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function downloadExcel() {
+            var jsonData = [];
+
+            // Collect the displayed data from the table
+            var rows = document.querySelectorAll('tbody tr');
+            rows.forEach(function(row) {
+                var rowData = [
+                    row.querySelector('td').textContent,
+                ];
+
+                var cells = row.querySelectorAll('td.editable');
+                cells.forEach(function(cell) {
+                    rowData.push(cell.textContent);
+                });
+
+                jsonData.push(rowData);
+            });
+
+            // Convert the data to worksheet format
+            var ws = XLSX.utils.aoa_to_sheet(jsonData);
+
+            // Create a Blob and download the Excel file
+            var blob = XLSX.write(ws, { bookType: 'xlsx', bookSST: true, type: 'blob' });
+            var url = window.URL.createObjectURL(blob);
+
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'table_data.xlsx';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
         }
     </script>
 
