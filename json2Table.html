@@ -48,6 +48,16 @@
         .edit-input {
             width: 80%;
         }
+
+        .pd-6 {
+        padding: 6px;
+        }
+
+      .input-search {
+        background-color: white;
+        color: black;
+        padding: 8px;
+       }
     </style>
 </head>
 <body>
@@ -57,10 +67,41 @@
     <input type="text" id="json-input" placeholder="Enter JSON data link">
     <button id="json-button" onclick="fetchAndCreateTable()">Create Table</button>
 
+    <input
+      type="text"
+      id="searchInput"
+      placeholder="Search..."
+      class="input-search"
+    />
+    <button onclick="handleInputChange();" class="pd-6">&#x1F50E;</button>
+    <button
+      onclick="document.getElementById('searchInput').value=''; handleInputChange();"
+      class="pd-6"
+    >
+      &#10006;
+    </button>
+
     <div id="table-container"></div>
     <div id="loading">Loading...</div>
 
     <script>
+        function handleInputChange() {
+            document.querySelectorAll('tbody tr').forEach(function (row) {
+            var rowVisible = Array.from(row.querySelectorAll('td')).some(td =>
+                td.textContent
+                .toLowerCase()
+                .includes(
+                    document.getElementById('searchInput').value.toLowerCase()
+                )
+            )
+            row.style.display =
+                document.getElementById('searchInput').value.toLowerCase() === '' ||
+                rowVisible
+                ? 'table-row'
+                : 'none'
+            })
+        }
+
         async function fetchAndCreateTable() {
             var jsonLink = document.getElementById("json-input").value;
             var loadingIndicator = document.getElementById("loading");
@@ -133,7 +174,6 @@
                                     if (event.key === "Enter") {
                                         event.preventDefault();
                                         var editedColumn = currentKey;
-                                
                                         triggerApi(item, editedColumn ,jsonLink);
                                     }
                                 });
@@ -155,7 +195,6 @@
         }
 
         async function triggerApi(data, editedColumn ,link) {
-
             var endIndex = link.indexOf("/?c")
             var url = endIndex !== -1 ? link.substring(0, endIndex) : link;
             var apiEndpoint = url;
