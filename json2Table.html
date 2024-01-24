@@ -39,7 +39,7 @@
         #json-input {
             width: 60%;
             padding: 5px;
-            margin: 10px;
+margin: 10px;
         }
 
         #json-select {
@@ -92,6 +92,7 @@
         <input type="text" id="json-input" placeholder="Enter or select JSON data link"> -->
         <label for="json-select">Select a JSON link:</label>
         <select id="json-select">
+            <option>Select</option>
             <option value="https://demodpd.kore.ai/sbaccounts">Account Data</option>
             <option value="https://demodpd.kore.ai/sbcustomers">Customer Data</option>
             <option value="https://demodpd.kore.ai/sbtransactions">Transaction Data</option>
@@ -104,13 +105,14 @@
     <button id="json-button" onclick="fetchAndCreateTable()">Create Table</button>
     
     <button id="download-json-button" onclick="downloadJSON()">Download JSON</button>
-    <!-- <button id="download-excel-button" onclick="downloadExcel()">Download Excel</button> -->
+    <button id="download-excel-button" onclick="downloadExcel()">Download Excel</button>
 
     <input
         type="text"
         id="searchInput"
         placeholder="Search..."
         class="input-search"
+        oninput="handleInputChange()"
     />
     <button onclick="handleInputChange();" class="pd-6">&#x1F50E;</button>
     <button
@@ -124,22 +126,7 @@
     <div id="loading">Loading...</div>
 
     <script>
-        function handleInputChange() {
-            document.querySelectorAll('tbody tr').forEach(function (row) {
-                var rowVisible = Array.from(row.querySelectorAll('td')).some(td =>
-                    td.textContent
-                        .toLowerCase()
-                        .includes(
-                            document.getElementById('searchInput').value.toLowerCase()
-                        )
-                )
-                row.style.display =
-                    document.getElementById('searchInput').value.toLowerCase() === '' ||
-                    rowVisible
-                        ? 'table-row'
-                        : 'none'
-            })
-        }
+        let originalData = [];
 
         async function fetchAndCreateTable() {
             var jsonLink = document.getElementById("json-input").value || document.getElementById("json-select").value;
@@ -154,78 +141,8 @@
                     throw new Error(`Failed to fetch JSON (${response.status} ${response.statusText})`);
                 }
 
-                var jsonData = await response.json();
-
-                var tableContainer = document.getElementById("table-container");
-                tableContainer.innerHTML = '';
-
-                var table = document.createElement("table");
-
-                var thead = document.createElement("thead");
-                var headerRow = document.createElement("tr");
-
-                var idTh = document.createElement("th");
-                idTh.textContent = "id";
-                headerRow.appendChild(idTh);
-
-                var uniqueKeys = new Set();
-
-                jsonData.forEach(function (item) {
-                    for (var key in item) {
-                        uniqueKeys.add(key);
-                    }
-                });
-
-                uniqueKeys.forEach(function (key) {
-                    if (key !== "id") {
-                        var th = document.createElement("th");
-                        th.textContent = key;
-                        headerRow.appendChild(th);
-                    }
-                });
-
-                thead.appendChild(headerRow);
-                table.appendChild(thead);
-
-                var tbody = document.createElement("tbody");
-
-                jsonData.forEach(function (item) {
-                    var row = document.createElement("tr");
-
-                    var idCell = document.createElement("td");
-                    idCell.textContent = item.id;
-                    row.appendChild(idCell);
-
-                    uniqueKeys.forEach(function (key) {
-                        if (key !== "id") {
-                            var cell = document.createElement("td");
-                            cell.textContent = typeof item[key] === 'object' ? (item[key] !== null ? JSON.stringify(item[key]) : "") : (item[key] !== null ? item[key] : '');
-                            cell.classList.add("editable");
-                            cell.setAttribute("contenteditable", "true");
-                            row.appendChild(cell);
-
-                            (function (currentKey) {
-                                cell.addEventListener("input", function () {
-                                    item[currentKey] = cell.textContent;
-                                });
-
-                                cell.addEventListener("keydown", function (event) {
-                                    if (event.key === "Enter") {
-                                        event.preventDefault();
-                                        var editedColumn = currentKey;
-                                        triggerApi(item, editedColumn ,jsonLink);
-                                    }
-                                });
-                            })(key);
-                        }
-                    });
-
-                    tbody.appendChild(row);
-                });
-
-                table.appendChild(tbody);
-
-                tableContainer.appendChild(table);
+                originalData = await response.json();
+                createTable(originalData);
             } catch (error) {
                 alert(`Error: ${error.message}`);
             } finally {
@@ -233,8 +150,81 @@
             }
         }
 
-        async function triggerApi(data, editedColumn ,link) {
-            var endIndex = link.indexOf("/?c")
+        function createTable(data) {
+            var tableContainer = document.getElementById("table-container");
+            tableContainer.innerHTML = '';
+
+            var table = document.createElement("table");
+
+            var thead = document.createElement("thead");
+            var headerRow = document.createElement("tr");
+
+            var idTh = document.createElement("th");
+            idTh.textContent = "id";
+            headerRow.appendChild(idTh);
+
+            var uniqueKeys = new Set();
+
+            data.forEach(function (item) {
+                for (var key in item) {
+                    uniqueKeys.add(key);
+                }
+            });
+
+            uniqueKeys.forEach(function (key) {
+                if (key !== "id") {
+                    var th = document.createElement("th");
+                    th.textContent = key;
+                    headerRow.appendChild(th);
+                }
+            });
+
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            var tbody = document.createElement("tbody");
+
+            data.forEach(function (item) {
+                var row = document.createElement("tr");
+
+                var idCell = document.createElement("td");
+                idCell.textContent = item.id;
+                row.appendChild(idCell);
+
+                uniqueKeys.forEach(function (key) {
+                    if (key !== "id") {
+                        var cell = document.createElement("td");
+                        cell.textContent = typeof item[key] === 'object' ? (item[key] !== null ? JSON.stringify(item[key]) : "") : (item[key] !== null ? item[key] : '');
+                        cell.classList.add("editable");
+                        cell.setAttribute("contenteditable", "true");
+                        row.appendChild(cell);
+
+                        (function (currentKey) {
+                            cell.addEventListener("input", function () {
+                                item[currentKey] = cell.textContent;
+                            });
+
+                            cell.addEventListener("keydown", function (event) {
+                                if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    var editedColumn = currentKey;
+                                    triggerApi(item, editedColumn , jsonLink);
+                                }
+                            });
+                        })(key);
+                    }
+                });
+
+                tbody.appendChild(row);
+            });
+
+            table.appendChild(tbody);
+
+            tableContainer.appendChild(table);
+        }
+
+        async function triggerApi(data, editedColumn, link) {
+            var endIndex = link.indexOf("/?c");
             var url = endIndex !== -1 ? link.substring(0, endIndex) : link;
             var apiEndpoint = url;
             
@@ -263,10 +253,21 @@
             }
         }
 
+        function handleInputChange() {
+            var searchValue = document.getElementById('searchInput').value.toLowerCase();
+            var filteredData = originalData.filter(function (item) {
+                return Object.values(item).some(function (value) {
+                    return value !== null && value.toString().toLowerCase().includes(searchValue);
+                });
+            });
+
+            createTable(filteredData);
+        }
+
         function downloadJSON() {
             var jsonData = [];
 
-            // Collect the displayed data from the table
+            // Collect the displayed data from the table based on search results
             var rows = document.querySelectorAll('tbody tr');
             rows.forEach(function(row) {
                 var rowData = {
@@ -299,7 +300,7 @@
         function downloadExcel() {
             var jsonData = [];
 
-            // Collect the displayed data from the table
+            // Collect the displayed data from the table based on search results
             var rows = document.querySelectorAll('tbody tr');
             rows.forEach(function(row) {
                 var rowData = [
@@ -314,11 +315,35 @@
                 jsonData.push(rowData);
             });
 
-            // Convert the data to worksheet format
+            // Get column names from the table header
+            var columnNames = [];
+            var headerCells = document.querySelectorAll('thead th');
+            headerCells.forEach(function(headerCell) {
+                columnNames.push(headerCell.textContent);
+            });
+
+            // Add column names as the first row in the data
+            jsonData.unshift(columnNames);
+
+            // Create a worksheet
             var ws = XLSX.utils.aoa_to_sheet(jsonData);
 
+            // Create a workbook
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'data');
+
+            // Generate binary data
+            var excelBinaryData = XLSX.write(wb, { bookType: 'xlsx', bookSST: true, type: 'binary' });
+
+            // Convert binary string to Uint8Array
+            var uint8Array = new Uint8Array(excelBinaryData.length);
+            for (var i = 0; i < excelBinaryData.length; i++) {
+                uint8Array[i] = excelBinaryData.charCodeAt(i) & 0xFF;
+            }
+
             // Create a Blob and download the Excel file
-            var blob = XLSX.write(ws, { bookType: 'xlsx', bookSST: true, type: 'blob' });
+            var blob = new Blob([uint8Array], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            
             var url = window.URL.createObjectURL(blob);
 
             var a = document.createElement('a');
@@ -329,6 +354,8 @@
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         }
+
+
     </script>
 
 </body>
